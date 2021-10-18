@@ -35,7 +35,8 @@ Program was run on MPCS clusters to derive these timings. Performance improvemen
               
 ## Performance comparison for OpenMP strategy
 Program was run on MPCS clusters to derive these timings. Performance improvement indicates the percentage decrease in average time taken by the parallel program as compared to the average time taken by the original serial program for the same number of particles, number of iterations, and same initial pos and vel data.
-          nThreads      avgTime       totalTime     Performance Improvement(%)
+
+          nThreads      avgTime       totalTime    Performance Improvement(%)
              16        0.021617        4.301800          546.44 
               8        0.033829        6.732069          317.21 
               4        0.041190        8.196903          239.19 
