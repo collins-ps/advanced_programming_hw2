@@ -7,7 +7,7 @@
 
 #define SOFTENING 1e-9f
 #define NUM_THREADS 8
-#define MARGIN 0.01 // margin of error allowed between parallel-calculated and serial-calculated values
+#define MARGIN 0.0001 // margin of error allowed between parallel-calculated and serial-calculated values
 
 typedef struct {
   float x, y, z;        /* particle positions */
@@ -33,6 +33,7 @@ void calc_force_serial(Particle *p, float dt, int n);
 
 int main(const int argc, const char** argv) {
   FILE *datafile    = NULL;      /* output file for particle positions */
+  // FILE *resultsfile    = NULL;  /* results file for performance tracking */
   int   nParticles  = 3000;      /* number of particles */
   int i;
   void *status;
@@ -56,15 +57,18 @@ int main(const int argc, const char** argv) {
   }
 
   double totalTime  = 0.0;
+  double baseTime_total = 0.0;
 
   datafile          = fopen("particles.dat","w");
   fprintf(datafile,"%d %d %d\n", nParticles, nIters, 0);
+
+  //resultsfile          = fopen("results_pthread.dat","a");
+  //fprintf(resultsfile,"%15s %15s %15s %15s\n", "nThreads", "avgTime", "totalTime", "Performance Improvement, Percent");
 
   /* ------------------------------*/
   /*     MAIN LOOP                 */
   /* ------------------------------*/
 
-  // pthread version // 
   for (int iter = 1; iter <= nIters; iter++) {
     printf("iteration:%d\n", iter);
     
@@ -85,13 +89,13 @@ int main(const int argc, const char** argv) {
         pthread_create(&t[i],NULL,calc_force,(void *)&params[i]);
     }
 
-    for (i = 0; i < NUM_THREADS; i++){
-        pthread_join(t[i],&status);
-        for (int j = params[i].strt; j <= (params[i].strt + params[i].nl - 1); j++) {  /* compute new position */
-            p[j].x += p[j].vx*dt;
-            p[j].y += p[j].vy*dt;
-            p[j].z += p[j].vz*dt;
-        }
+    for (i = 0; i < NUM_THREADS; i++)
+      pthread_join(t[i],&status);
+
+    for (int j = 0; j < nParticles; j++) {  /* compute new position */
+        p[j].x += p[j].vx*dt;
+        p[j].y += p[j].vy*dt;
+        p[j].z += p[j].vz*dt;
     }
 
     const double tElapsed = GetTimer() / 1000.0;
@@ -99,27 +103,41 @@ int main(const int argc, const char** argv) {
       totalTime += tElapsed; 
     }
 
-    // test accuracy //
+    // test performance and accuracy //
+    StartTimer();
     calc_force_serial(p_test, dt, nParticles);
     for (int i = 0 ; i < nParticles; i++) {  /* compute new position */
       p_test[i].x += p_test[i].vx*dt;
       p_test[i].y += p_test[i].vy*dt;
       p_test[i].z += p_test[i].vz*dt;
     }
+    const double tElapsed_base = GetTimer() / 1000.0;
+      if (iter > 1) {                          
+        baseTime_total += tElapsed_base; 
+      } 
     for (i = 0; i < nParticles; i++){
-        printf("%f ", p[i].vx);
-        printf("%f ", p_test[i].vx);
-        printf("%d ", i);
         assert(fabs(p[i].vx - p_test[i].vx) < MARGIN); 
         assert(fabs(p[i].vy - p_test[i].vy) < MARGIN); 
         assert(fabs(p[i].vz - p_test[i].vz) < MARGIN); 
     }
-    printf("All tests passed."); 
+    printf("Passed accuracy test for iteration %d.\n",iter); 
 }
+  // test accuracy //
+  for (int i = 0 ; i < nParticles; i++) { 
+      assert(fabs(p[i].vx - p_test[i].vx) < MARGIN); 
+      assert(fabs(p[i].vy - p_test[i].vy) < MARGIN); 
+      assert(fabs(p[i].vz - p_test[i].vz) < MARGIN); 
+    }
+  printf("Passed all tests.\n"); 
+
   fclose(datafile);
   double avgTime = totalTime / (double)(nIters-1); 
+  double avgTime_base = baseTime_total / (double)(nIters-1);
+  double perf_imprv = fabs(avgTime_base - avgTime)/ avgTime * 100;
 
   printf("avgTime: %f   totTime: %f \n", avgTime, totalTime);
+  //fprintf(resultsfile, "%15d %15f %15f %15.2f \n", NUM_THREADS, avgTime, totalTime, perf_imprv);
+  //fclose(resultsfile);
   free(buf);
   free(buf_test);
 }
