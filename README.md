@@ -39,7 +39,6 @@ Program was run on MPCS Linux clusters without any optimization flags to derive 
 Program was run on MPCS Linux clusters without any optimization flags to derive these timings. Performance improvement indicates the percentage decrease in average time taken by the parallel program over 200 iterations as compared to the average time taken by the original serial program for the same number of particles, number of iterations, and same initial pos and vel data.
 
           nThreads      avgTime       totalTime    Performance Improvement(%)
-             16        0.021617        4.301800          546.44 
               8        0.033829        6.732069          317.21 
               4        0.041190        8.196903          239.19 
               2        0.073572       14.640751           84.54 
